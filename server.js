@@ -7,22 +7,41 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;  // Store the API key in .env
 
+// Define the route to interact with Gemini API
 app.post("/chat", async (req, res) => {
     const { message } = req.body;
+
     try {
+        // Making the POST request to Gemini API
         const response = await axios.post(
-            "https://api.openai.com/v1/chat/completions",
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, // Gemini API endpoint
             {
-                model: "gpt-4",
-                messages: [{ role: "system", content: "You are a friendly Python tutor for kids." }, { role: "user", content: message }],
+                contents: [
+                    {
+                        parts: [
+                            { text: message || "Explain how AI works" } // Default message if no message is provided
+                        ]
+                    }
+                ]
             },
-            { headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" } }
+            {
+                headers: {
+                    "Content-Type": "application/json" // Set the content type as JSON
+                }
+            }
         );
-        res.json(response.data.choices[0].message.content);
+        const aiResponse = response.data.candidates[0].content.parts[0].text;
+
+        // Send the AI response back to the frontend
+        res.json({ response: aiResponse });
     } catch (error) {
-        res.status(500).json({ error: "Error connecting to AI API" });
+        // Handle errors and provide meaningful messages
+        res.status(500).json({
+            error: "Error connecting to Gemini API",
+            details: error.response ? error.response.data : error.message,
+        });
     }
 });
 
